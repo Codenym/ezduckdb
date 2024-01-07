@@ -1,6 +1,6 @@
 # ezduckdb
 
-Tools to make working with [duckdb](duckdb.org) easier for [codenym](codnym.github.io/website).
+Tools to make working with [duckdb](https://duckdb.org) easier for [codenym](https://codnym.github.io/website).
 
 Not intended for general use, but feel free to steal code or ideas.
 
@@ -8,7 +8,7 @@ If you'd be super excited about this being made for general use, reach out.
 
 ## Acknowledgements
 
-There's a ton code and ideas in here from a [dagster](dagster.io) [blog post](https://dagster.io/blog/duckdb-data-lake)
+There's a ton code and ideas in here from a [dagster](https://dagster.io) [blog post](https://dagster.io/blog/duckdb-data-lake)
 
 ## Installation
 
