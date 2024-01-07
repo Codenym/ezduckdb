@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>ezduckdb API documentation</title>
-<meta name="description" content="" />
+<meta name="description" content="ezduckdb …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -22,11 +22,126 @@
 <h1 class="title">Package <code>ezduckdb</code></h1>
 </header>
 <section id="section-intro">
+<h1 id="ezduckdb">ezduckdb</h1>
+<p>Tools to make working with <a href="duckdb.org">duckdb</a> easier for <a href="codnym.github.io/website">codenym</a>.</p>
+<p>Not intended for general use, but feel free to steal code or ideas.</p>
+<p>If you'd be super excited about this being made for general use, reach out.</p>
+<h2 id="acknowledgements">Acknowledgements</h2>
+<p>There's a ton code and ideas in here from a <a href="dagster.io">dagster</a> <a href="https://dagster.io/blog/duckdb-data-lake">blog post</a></p>
+<h2 id="installation">Installation</h2>
+<pre><code class="language-bash">`pip install ezduckdb`
+</code></pre>
+<h2 id="usage">Usage</h2>
+<p>There are 3 classes in this library:</p>
+<ul>
+<li><code>S3AwarePath</code>: <code>pathlib.Path</code> + s3 paths</li>
+<li><code>SQL</code>: Work with sql files programatically via templating.</li>
+<li><code>DuckDB</code>: Connection and Query manager</li>
+</ul>
+<h3 id="s3awarepath">S3AwarePath</h3>
+<p><code>S3AwarePath</code> adds functionality to the <code>pathlib.Path</code> class.</p>
+<ul>
+<li><code>is_s3</code>: Is path an s3 path (ie <code>s3://....</code>)</li>
+<li><code>get_s3_bucket</code> and <code>get_s3_prefix</code>: Break path for use with boto3</li>
+<li>Retain <code>s3://</code> when cast to string (ie in f strings)</li>
+<li><code>get_table_name</code>: Get db table name from file name based on codenym convention</li>
+<li><code>&lt;schema&gt;_&lt;table&gt;.&lt;extension&gt;</code></li>
+</ul>
+<pre><code class="language-python">from ezduckdb import S3AwarePath
+
+s3_path = S3AwarePath(&quot;s3://bucket/curated/s1chema_table1.csv&quot;)
+assert inp.get_s3_bucket() == &quot;bucket&quot;
+assert inp.get_s3_prefix() == &quot;curated/s1chema_table1.csv&quot;
+assert str(inp) == &quot;s3://bucket/curated/s1chema_table1.csv&quot;
+assert inp.is_s3()
+assert inp.get_table_name() == (&quot;s1chema&quot;, &quot;table1&quot;)
+</code></pre>
+<h3 id="sql">SQL</h3>
+<p><code>SQL</code> enable type based templating for programatical sql query generation for duckdb.</p>
+<p>Non-exhaustive list of replacements:</p>
+<ul>
+<li><code>pd.DataFrame</code> is converted to <code>df_&lt;id&gt;</code> in the query to enable pandas querying</li>
+<li><code>Str</code> are replaced with the string value enclosed in single quotes</li>
+<li><code>Int</code> are replaced with the value without quotes</li>
+<li><code>SQL</code> replaces recusively for nested querying</li>
+</ul>
+<h4 id="basic">Basic</h4>
+<pre><code class="language-python">from ezduckdb import SQL
+
+example = SQL(&quot;SELECT * FROM $table WHERE id = $id&quot;, table=&quot;foo&quot;, id=1)
+assert inp.to_string() == &quot;SELECT * FROM 'foo' WHERE id = 1&quot;
+</code></pre>
+<h4 id="pandas">Pandas</h4>
+<pre><code class="language-python">from ezduckdb import SQL
+import pandas as pd
+
+df = pd.DataFrame({&quot;id&quot;: [1, 2, 3]})
+inp = SQL(&quot;SELECT * FROM $table&quot;, table=df)
+assert inp.to_string() == &quot;SELECT * FROM df_&quot; + str(id(df))
+</code></pre>
+<h4 id="nested">Nested</h4>
+<pre><code class="language-python">from ezduckdb import SQL
+
+example = SQL(&quot;SELECT * FROM $table&quot;, table=SQL(&quot;SELECT * FROM $table&quot;, table=&quot;foo&quot;))
+assert inp.to_string() == &quot;SELECT * FROM (SELECT * FROM 'foo')&quot;
+</code></pre>
+<h3 id="duckdb">DuckDB</h3>
+<p><code>DuckDB</code> is a connection manager for duckdb that has some convenience methods for querying.</p>
+<ul>
+<li>If <code>s3_storage_used=True</code> then <code>query</code> method will:</li>
+<li>Load <code>httpfs</code> and <code>aws</code> duckdb extensions</li>
+<li>call <code>load_aws_credentials</code> passing the <code>aws_profile</code>.</li>
+<li><code>query</code> method will:</li>
+<li>Do all sql templating for <code>SQL</code> object.</li>
+<li>Return a <code>pd.DataFrame</code> of the results if applicable</li>
+<li>Provide a context manager for pure sql querying with strings</li>
+</ul>
+<h4 id="templated-querying-querying-with-sql-objects">Templated Querying (Querying with <code>SQL</code> objects)</h4>
+<h5 id="basic-querying">Basic Querying</h5>
+<pre><code class="language-python">from ezduckdb import DuckDB
+import pandas as pd
+
+db = DuckDB(s3_storage_used=False)
+
+assert db.query(SQL(&quot;select 1&quot;)).values == pd.DataFrame([(1,)]).values
+</code></pre>
+<h5 id="pandas-querying">Pandas Querying</h5>
+<pre><code class="language-python">from ezduckdb import DuckDB
+import pandas as pd
+
+db = DuckDB(s3_storage_used=False)
+df = pd.DataFrame({&quot;id&quot;: [1, 2, 3]})
+
+actual = db.query(SQL(&quot;SELECT * FROM $table&quot;, table=df))
+expected = pd.DataFrame([(1,), (2,), (3,)])
+assert (actual.values == expected.values).all()
+</code></pre>
+<h5 id="s3-querying">S3 querying</h5>
+<pre><code class="language-python">from ezduckdb import DuckDB
+import pandas as pd
+
+db = DuckDB(s3_storage_used=True)
+s3_path = &quot;s3://codenym-automated-testing/ezduckdb/parquet/schema1_table1.parquet&quot;
+
+actual = db.query(SQL(&quot;SELECT * FROM read_parquet($s3_path)&quot;, s3_path=s3_path))
+expected = pd.DataFrame([[1, 4], [2, 5], [3, 6]])
+assert (actual.values == expected.values).all()
+</code></pre>
+<h4 id="context-manager-querying-with-strings">Context Manager (Querying with Strings)</h4>
+<pre><code class="language-python">from ezduckdb import DuckDB
+import pandas as pd
+
+with DuckDB(s3_storage_used=False) as conn:
+    assert conn.query(&quot;select 1&quot;).df().values == pd.DataFrame([(1,)]).values
+</code></pre>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from .core import SQL, DuckDB
+<pre><code class="python">&#34;&#34;&#34;
+.. include:: ../README.md
+&#34;&#34;&#34;
+from .core import SQL, DuckDB
 from .paths import S3AwarePath</code></pre>
 </details>
 </section>
@@ -53,7 +168,33 @@ from .paths import S3AwarePath</code></pre>
 <nav id="sidebar">
 <h1>Index</h1>
 <div class="toc">
-<ul></ul>
+<ul>
+<li><a href="#ezduckdb">ezduckdb</a><ul>
+<li><a href="#acknowledgements">Acknowledgements</a></li>
+<li><a href="#installation">Installation</a></li>
+<li><a href="#usage">Usage</a><ul>
+<li><a href="#s3awarepath">S3AwarePath</a></li>
+<li><a href="#sql">SQL</a><ul>
+<li><a href="#basic">Basic</a></li>
+<li><a href="#pandas">Pandas</a></li>
+<li><a href="#nested">Nested</a></li>
+</ul>
+</li>
+<li><a href="#duckdb">DuckDB</a><ul>
+<li><a href="#templated-querying-querying-with-sql-objects">Templated Querying (Querying with SQL objects)</a><ul>
+<li><a href="#basic-querying">Basic Querying</a></li>
+<li><a href="#pandas-querying">Pandas Querying</a></li>
+<li><a href="#s3-querying">S3 querying</a></li>
+</ul>
+</li>
+<li><a href="#context-manager-querying-with-strings">Context Manager (Querying with Strings)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
 </div>
 <ul id="index">
 <li><h3><a href="#header-submodules">Sub-modules</a></h3>
