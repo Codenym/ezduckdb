@@ -1,10 +1,9 @@
 from pathlib import Path
 
 
-class FlexPath(type(Path())):
-
+class S3AwarePath(type(Path())):
     def is_s3(self):
-        return self.parts[0] == 's3:'
+        return self.parts[0] == "s3:"
 
     def __str__(self):
         if self.is_s3():
@@ -20,15 +19,15 @@ class FlexPath(type(Path())):
 
     def get_s3_prefix(self):
         if self.is_s3():
-            return '/'.join(self.parts[2:])
+            return "/".join(self.parts[2:])
         else:
             raise Exception("Not an S3 path")
 
-
-def get_table_name_from_path(fpath: FlexPath):
-    if isinstance(fpath, str):
-        fpath = FlexPath(fpath)
-    schema_name = fpath.stem.split('_')[0]
-    table_name = fpath.stem[len(schema_name) + 1:]
-    return schema_name, table_name
-
+    def get_table_name(self):
+        if self.stem.count("_") < 1:
+            raise Exception(
+                "Not a valid format. Needs at least 1 `_` to match format `<schema_name>_<table_name>`"
+            )
+        schema_name = self.stem.split("_")[0]
+        table_name = self.stem[len(schema_name) + 1 :]
+        return schema_name, table_name

@@ -3,6 +3,7 @@ import pandas as pd
 from sqlescapy import sqlescape
 from string import Template
 from typing import Mapping
+from datanym import S3AwarePath
 
 
 class SQL:
@@ -19,7 +20,7 @@ class SQL:
                 replacements[key] = f"df_{id(value)}"
             elif isinstance(value, SQL):
                 replacements[key] = f"({value.to_string()})"
-            elif isinstance(value, str):
+            elif isinstance(value, (str, S3AwarePath)):
                 replacements[key] = f"'{sqlescape(value)}'"
             elif isinstance(value, (int, float, bool)):
                 replacements[key] = str(value)
