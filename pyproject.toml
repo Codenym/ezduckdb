@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "twine",
+]
+
+[project]
+name = "ezduckdb"
+version = "0.0.2"
+authors = [
+  { name="isaac flath", email="isaac.flath@gmail.com" },
+]
+description = "Package to make working with duckdb easier"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "duckdb",
+    "pandas",
+    "sqlescapy",
+]
+
+[project.urls]
+Homepage = "https://github.com/codenym/ezduckdb"
+Issues = "https://github.com/codenym/ezduckdb/issues"
