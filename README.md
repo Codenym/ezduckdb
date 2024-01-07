@@ -1,6 +1,6 @@
 # ezduckdb
 
-Tools to make working with [duckdb](https://duckdb.org) easier for [codenym](https://codnym.github.io/website).
+Tools to make working with [duckdb](https://duckdb.org) easier for [codenym](https://codenym.github.io/website).
 
 Not intended for general use, but feel free to steal code or ideas.
 
