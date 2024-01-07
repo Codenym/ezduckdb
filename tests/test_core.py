@@ -57,12 +57,12 @@ class TestDuckDB:
         assert (act == exp).all()
 
     def test_query_s3_parquet(self):
-        s3_parquet = (
+        s3_path = (
             "s3://codenym-automated-testing/ezduckdb/parquet/schema1_table1.parquet"
         )
         db = DuckDB(s3_storage_used=True)
         act = db.query(
-            SQL("SELECT * FROM read_parquet($s3_parquet)", s3_parquet=s3_parquet)
+            SQL("SELECT * FROM read_parquet($s3_path)", s3_path=s3_path)
         ).values
         exp = pd.DataFrame([[1, 4], [2, 5], [3, 6]]).values
 
