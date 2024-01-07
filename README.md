@@ -13,7 +13,7 @@ There's a ton code and ideas in here from a [dagster](dagster.io) [blog post](ht
 ## Installation
 
 ```bash
-`pip install ezduckdb`
+pip install ezduckdb
 ```
 
 ## Usage

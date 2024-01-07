@@ -30,7 +30,60 @@
 
 
 class S3AwarePath(type(Path())):
+    &#34;&#34;&#34;
+    A subclass of pathlib.Path that adds additional methods for handling
+    Amazon S3 paths.
+
+    Methods
+    -------
+    is_s3()
+        Checks if the path is an S3 path.
+
+    __str__()
+        Returns the string representation of the path, formatted correctly
+        for S3 paths.
+
+    get_s3_bucket()
+        Extracts the bucket name from an S3 path.
+
+    get_s3_prefix()
+        Extracts the S3 prefix (the path inside the bucket) from an S3 path.
+
+    get_table_name()
+        Parses the schema and table name from the file stem assuming a
+        specific naming convention of `&lt;schema_name&gt;_&lt;table_name&gt;.extension`.
+
+    Raises
+    ------
+    Exception
+        If the path is not an S3 path when calling `get_s3_bucket` or
+        `get_s3_prefix`, or if the file stem does not follow the required
+        naming convention when calling `get_table_name`.
+
+    Examples
+    --------
+    &gt;&gt;&gt; path = S3AwarePath(&#34;s3://mybucket/myfolder/myfile_name_here.parquet&#34;)
+    &gt;&gt;&gt; path.is_s3()
+    True
+    &gt;&gt;&gt; str(path)
+    &#39;s3://mybucket/myfolder/myfile.parquet&#39;
+    &gt;&gt;&gt; path.get_s3_bucket()
+    &#39;mybucket&#39;
+    &gt;&gt;&gt; path.get_s3_prefix()
+    &#39;myfolder/myfile.parquet&#39;
+    &gt;&gt;&gt; path.get_table_name()
+    (&#39;myfile&#39;, &#39;name_here&#39;)
+    &#34;&#34;&#34;
+
     def is_s3(self):
+        &#34;&#34;&#34;
+        Check if the path is an S3 path.
+
+        Returns
+        -------
+        bool
+            True if the path is an S3 path, False otherwise.
+        &#34;&#34;&#34;
         return self.parts[0] == &#34;s3:&#34;
 
     def __str__(self):
@@ -40,18 +93,63 @@ class S3AwarePath(type(Path())):
             return super().__str__()
 
     def get_s3_bucket(self):
+        &#34;&#34;&#34;Extract the bucket name from an S3 path.
+
+        Returns
+        -------
+        str
+            The bucket name.
+
+        Raises
+        ------
+        Exception
+            If the path is not an S3 path.
+        &#34;&#34;&#34;
         if self.is_s3():
             return self.parts[1]
         else:
             raise Exception(&#34;Not an S3 path&#34;)
 
     def get_s3_prefix(self):
+        &#34;&#34;&#34;Extract the S3 prefix from an S3 path.
+
+        Returns
+        -------
+        str
+            The S3 prefix (the path inside the bucket).
+
+        Raises
+        ------
+        Exception
+            If the path is not an S3 path.
+        &#34;&#34;&#34;
         if self.is_s3():
             return &#34;/&#34;.join(self.parts[2:])
         else:
             raise Exception(&#34;Not an S3 path&#34;)
 
     def get_table_name(self):
+        &#34;&#34;&#34;
+        Parse the schema and table name from the file stem.
+
+        Assumes a naming convention of `&lt;schema_name&gt;_&lt;table_name&gt;`.
+
+        Returns
+        -------
+        tuple of str
+            A tuple containing the schema name and table name.
+
+        Raises
+        ------
+        Exception
+            If the file stem does not follow the required naming convention.
+
+        Examples
+        --------
+        &gt;&gt;&gt; path = S3AwarePath(&#34;myfile_name_here.parquet&#34;)
+        &gt;&gt;&gt; path.get_table_name()
+        (&#39;myfile&#39;, &#39;name_here&#39;)
+        &#34;&#34;&#34;
         if self.stem.count(&#34;_&#34;) &lt; 1:
             raise Exception(
                 &#34;Not a valid format. Needs at least 1 `_` to match format `&lt;schema_name&gt;_&lt;table_name&gt;`&#34;
@@ -75,14 +173,100 @@ class S3AwarePath(type(Path())):
 <span>(</span><span>*args, **kwargs)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Path subclass for non-Windows systems.</p>
-<p>On a POSIX system, instantiating a Path should return this object.</p></div>
+<div class="desc"><p>A subclass of pathlib.Path that adds additional methods for handling
+Amazon S3 paths.</p>
+<h2 id="methods">Methods</h2>
+<p>is_s3()
+Checks if the path is an S3 path.</p>
+<p><strong>str</strong>()
+Returns the string representation of the path, formatted correctly
+for S3 paths.</p>
+<p>get_s3_bucket()
+Extracts the bucket name from an S3 path.</p>
+<p>get_s3_prefix()
+Extracts the S3 prefix (the path inside the bucket) from an S3 path.</p>
+<p>get_table_name()
+Parses the schema and table name from the file stem assuming a
+specific naming convention of <code>&lt;schema_name&gt;_&lt;table_name&gt;.extension</code>.</p>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>Exception</code></dt>
+<dd>If the path is not an S3 path when calling <code>get_s3_bucket</code> or
+<code>get_s3_prefix</code>, or if the file stem does not follow the required
+naming convention when calling <code>get_table_name</code>.</dd>
+</dl>
+<h2 id="examples">Examples</h2>
+<pre><code class="language-python-repl">&gt;&gt;&gt; path = S3AwarePath(&quot;s3://mybucket/myfolder/myfile_name_here.parquet&quot;)
+&gt;&gt;&gt; path.is_s3()
+True
+&gt;&gt;&gt; str(path)
+'s3://mybucket/myfolder/myfile.parquet'
+&gt;&gt;&gt; path.get_s3_bucket()
+'mybucket'
+&gt;&gt;&gt; path.get_s3_prefix()
+'myfolder/myfile.parquet'
+&gt;&gt;&gt; path.get_table_name()
+('myfile', 'name_here')
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class S3AwarePath(type(Path())):
+    &#34;&#34;&#34;
+    A subclass of pathlib.Path that adds additional methods for handling
+    Amazon S3 paths.
+
+    Methods
+    -------
+    is_s3()
+        Checks if the path is an S3 path.
+
+    __str__()
+        Returns the string representation of the path, formatted correctly
+        for S3 paths.
+
+    get_s3_bucket()
+        Extracts the bucket name from an S3 path.
+
+    get_s3_prefix()
+        Extracts the S3 prefix (the path inside the bucket) from an S3 path.
+
+    get_table_name()
+        Parses the schema and table name from the file stem assuming a
+        specific naming convention of `&lt;schema_name&gt;_&lt;table_name&gt;.extension`.
+
+    Raises
+    ------
+    Exception
+        If the path is not an S3 path when calling `get_s3_bucket` or
+        `get_s3_prefix`, or if the file stem does not follow the required
+        naming convention when calling `get_table_name`.
+
+    Examples
+    --------
+    &gt;&gt;&gt; path = S3AwarePath(&#34;s3://mybucket/myfolder/myfile_name_here.parquet&#34;)
+    &gt;&gt;&gt; path.is_s3()
+    True
+    &gt;&gt;&gt; str(path)
+    &#39;s3://mybucket/myfolder/myfile.parquet&#39;
+    &gt;&gt;&gt; path.get_s3_bucket()
+    &#39;mybucket&#39;
+    &gt;&gt;&gt; path.get_s3_prefix()
+    &#39;myfolder/myfile.parquet&#39;
+    &gt;&gt;&gt; path.get_table_name()
+    (&#39;myfile&#39;, &#39;name_here&#39;)
+    &#34;&#34;&#34;
+
     def is_s3(self):
+        &#34;&#34;&#34;
+        Check if the path is an S3 path.
+
+        Returns
+        -------
+        bool
+            True if the path is an S3 path, False otherwise.
+        &#34;&#34;&#34;
         return self.parts[0] == &#34;s3:&#34;
 
     def __str__(self):
@@ -92,18 +276,63 @@ class S3AwarePath(type(Path())):
             return super().__str__()
 
     def get_s3_bucket(self):
+        &#34;&#34;&#34;Extract the bucket name from an S3 path.
+
+        Returns
+        -------
+        str
+            The bucket name.
+
+        Raises
+        ------
+        Exception
+            If the path is not an S3 path.
+        &#34;&#34;&#34;
         if self.is_s3():
             return self.parts[1]
         else:
             raise Exception(&#34;Not an S3 path&#34;)
 
     def get_s3_prefix(self):
+        &#34;&#34;&#34;Extract the S3 prefix from an S3 path.
+
+        Returns
+        -------
+        str
+            The S3 prefix (the path inside the bucket).
+
+        Raises
+        ------
+        Exception
+            If the path is not an S3 path.
+        &#34;&#34;&#34;
         if self.is_s3():
             return &#34;/&#34;.join(self.parts[2:])
         else:
             raise Exception(&#34;Not an S3 path&#34;)
 
     def get_table_name(self):
+        &#34;&#34;&#34;
+        Parse the schema and table name from the file stem.
+
+        Assumes a naming convention of `&lt;schema_name&gt;_&lt;table_name&gt;`.
+
+        Returns
+        -------
+        tuple of str
+            A tuple containing the schema name and table name.
+
+        Raises
+        ------
+        Exception
+            If the file stem does not follow the required naming convention.
+
+        Examples
+        --------
+        &gt;&gt;&gt; path = S3AwarePath(&#34;myfile_name_here.parquet&#34;)
+        &gt;&gt;&gt; path.get_table_name()
+        (&#39;myfile&#39;, &#39;name_here&#39;)
+        &#34;&#34;&#34;
         if self.stem.count(&#34;_&#34;) &lt; 1:
             raise Exception(
                 &#34;Not a valid format. Needs at least 1 `_` to match format `&lt;schema_name&gt;_&lt;table_name&gt;`&#34;
@@ -125,12 +354,34 @@ class S3AwarePath(type(Path())):
 <span>def <span class="ident">get_s3_bucket</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Extract the bucket name from an S3 path.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>str</code></dt>
+<dd>The bucket name.</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>Exception</code></dt>
+<dd>If the path is not an S3 path.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_s3_bucket(self):
+    &#34;&#34;&#34;Extract the bucket name from an S3 path.
+
+    Returns
+    -------
+    str
+        The bucket name.
+
+    Raises
+    ------
+    Exception
+        If the path is not an S3 path.
+    &#34;&#34;&#34;
     if self.is_s3():
         return self.parts[1]
     else:
@@ -141,12 +392,34 @@ class S3AwarePath(type(Path())):
 <span>def <span class="ident">get_s3_prefix</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Extract the S3 prefix from an S3 path.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>str</code></dt>
+<dd>The S3 prefix (the path inside the bucket).</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>Exception</code></dt>
+<dd>If the path is not an S3 path.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_s3_prefix(self):
+    &#34;&#34;&#34;Extract the S3 prefix from an S3 path.
+
+    Returns
+    -------
+    str
+        The S3 prefix (the path inside the bucket).
+
+    Raises
+    ------
+    Exception
+        If the path is not an S3 path.
+    &#34;&#34;&#34;
     if self.is_s3():
         return &#34;/&#34;.join(self.parts[2:])
     else:
@@ -157,12 +430,49 @@ class S3AwarePath(type(Path())):
 <span>def <span class="ident">get_table_name</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Parse the schema and table name from the file stem.</p>
+<p>Assumes a naming convention of <code>&lt;schema_name&gt;_&lt;table_name&gt;</code>.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code> of <code>str</code></dt>
+<dd>A tuple containing the schema name and table name.</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>Exception</code></dt>
+<dd>If the file stem does not follow the required naming convention.</dd>
+</dl>
+<h2 id="examples">Examples</h2>
+<pre><code class="language-python-repl">&gt;&gt;&gt; path = S3AwarePath(&quot;myfile_name_here.parquet&quot;)
+&gt;&gt;&gt; path.get_table_name()
+('myfile', 'name_here')
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_table_name(self):
+    &#34;&#34;&#34;
+    Parse the schema and table name from the file stem.
+
+    Assumes a naming convention of `&lt;schema_name&gt;_&lt;table_name&gt;`.
+
+    Returns
+    -------
+    tuple of str
+        A tuple containing the schema name and table name.
+
+    Raises
+    ------
+    Exception
+        If the file stem does not follow the required naming convention.
+
+    Examples
+    --------
+    &gt;&gt;&gt; path = S3AwarePath(&#34;myfile_name_here.parquet&#34;)
+    &gt;&gt;&gt; path.get_table_name()
+    (&#39;myfile&#39;, &#39;name_here&#39;)
+    &#34;&#34;&#34;
     if self.stem.count(&#34;_&#34;) &lt; 1:
         raise Exception(
             &#34;Not a valid format. Needs at least 1 `_` to match format `&lt;schema_name&gt;_&lt;table_name&gt;`&#34;
@@ -176,12 +486,25 @@ class S3AwarePath(type(Path())):
 <span>def <span class="ident">is_s3</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Check if the path is an S3 path.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>True if the path is an S3 path, False otherwise.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def is_s3(self):
+    &#34;&#34;&#34;
+    Check if the path is an S3 path.
+
+    Returns
+    -------
+    bool
+        True if the path is an S3 path, False otherwise.
+    &#34;&#34;&#34;
     return self.parts[0] == &#34;s3:&#34;</code></pre>
 </details>
 </dd>

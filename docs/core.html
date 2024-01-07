@@ -168,6 +168,38 @@ class SQL:
 
 
 class DuckDB:
+    &#34;&#34;&#34;A class for managing connections and queries to a DuckDB database.
+
+    This class provides an interface for connecting to a DuckDB database,
+    executing queries, and managing the database connection. It supports
+    integration with S3 storage using AWS credentials.
+
+    Parameters
+    ----------
+    options : str, optional
+        Additional options for the database connection, by default &#34;&#34;.
+    db_location : str, optional
+        The location of the database. Use &#39;:memory:&#39; for in-memory database,
+        by default &#34;:memory:&#34;.
+    s3_storage_used : bool, optional
+        Indicates whether S3 storage is used, by default True.
+    aws_profile : str, optional
+        The AWS profile name to be used if S3 storage is integrated,
+        by default &#34;codenym&#34;.
+
+    Attributes
+    ----------
+    options : str
+        Options for the database connection.
+    db_location : str
+        The location of the DuckDB database.
+    s3_storage_used : bool
+        Flag to determine the usage of S3 storage.
+    aws_profile : str
+        The AWS profile name for accessing S3 storage.
+
+    &#34;&#34;&#34;
+
     def __init__(
         self,
         options=&#34;&#34;,
@@ -181,15 +213,58 @@ class DuckDB:
         self.aws_profile = aws_profile
 
     def connect(self):
-        db = connect(self.db_location)
+        &#34;&#34;&#34;
+        Establishes a connection to the DuckDB database.
+
+        This method sets up the database connection based on the initialized
+        parameters. If S3 storage is used, it installs and loads necessary
+        extensions and sets the AWS credentials.
+
+        Notes
+        -----
+        -  It is recommended to use the context manager instead for most uses.
+
+        Returns
+        -------
+        connection
+            The connection object to the DuckDB database.
+
+        Examples
+        --------
+        &gt;&gt;&gt; duckdb_instance = DuckDB()
+        &gt;&gt;&gt; connection = duckdb_instance.connect()
+        &#34;&#34;&#34;
+        connection = connect(self.db_location)
         if self.s3_storage_used:
-            db.query(&#34;install httpfs; load httpfs;&#34;)
-            db.query(&#34;install aws; load aws;&#34;)
-            db.query(f&#34;CALL load_aws_credentials(&#39;{self.aws_profile}&#39;);&#34;)
-        db.query(self.options)
-        return db
+            connection.query(&#34;install httpfs; load httpfs;&#34;)
+            connection.query(&#34;install aws; load aws;&#34;)
+            connection.query(f&#34;CALL load_aws_credentials(&#39;{self.aws_profile}&#39;);&#34;)
+        connection.query(self.options)
+        return connection
 
     def query(self, select_statement: SQL):
+        &#34;&#34;&#34;Executes a SQL query on the DuckDB database.
+
+        This method connects to the database, registers dataframes from the
+        provided SQL statement, and then executes the query.
+
+        Parameters
+        ----------
+        select_statement : SQL
+            An SQL object representing the SQL query to be executed.
+
+        Returns
+        -------
+        DataFrame or None
+            A pandas DataFrame containing the result of the query, or None
+            if there is no result.
+
+        Examples
+        --------
+        &gt;&gt;&gt; duckdb_instance = DuckDB()
+        &gt;&gt;&gt; df = pd.DataFrame(...)
+        &gt;&gt;&gt; result = duckdb_instance.query(SQL(&#34;SELECT $value FROM $df&#34;,value=123,df=df))
+        &#34;&#34;&#34;
         db = self.connect()
         dataframes = select_statement.collect_dataframes()
         for key, value in dataframes.items():
@@ -201,12 +276,44 @@ class DuckDB:
         return result.df()
 
     def __enter__(self):
-        self.__connection = self.connect()
-        return self.__connection
+        &#34;&#34;&#34;Connects to the DuckDB database.
+
+        The `with` statement will bind a duckdb connect return to
+        the target specified in the as clause of the statement.
+
+        Returns
+        -------
+        connection
+            The connection object to the DuckDB database.
+
+        Examples
+        --------
+        &gt;&gt;&gt; with DuckDB() as connection:
+        ...     # db is a connected database instance
+        ...     result = connection.query(&#34;SELECT COUNT(*) FROM my_table;&#34;)
+        &#34;&#34;&#34;
+        self.connection = self.connect()
+        return self.connection
 
     def __exit__(self, exc_type, exc_value, exc_tb):
-        self.__connection.close()
-        self.__connection = None</code></pre>
+        &#34;&#34;&#34;Exit the runtime context and close the database connection.
+
+        Parameters
+        ----------
+        exc_type : Exception or None
+            The type of the exception that caused the context to be exited.
+        exc_value : Exception or None
+            The exception that caused the context to be exited.
+        exc_tb : Traceback or Non e
+            A traceback object.
+
+        Examples
+        --------
+        &gt;&gt;&gt; with DuckDB() as connection:
+        ...     # Operations with db
+        ... # Automatic closure of db connection occurs here
+        &#34;&#34;&#34;
+        self.connection.close()</code></pre>
 </details>
 </section>
 <section>
@@ -223,12 +330,71 @@ class DuckDB:
 <span>(</span><span>options='', db_location=':memory:', s3_storage_used=True, aws_profile='codenym')</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>A class for managing connections and queries to a DuckDB database.</p>
+<p>This class provides an interface for connecting to a DuckDB database,
+executing queries, and managing the database connection. It supports
+integration with S3 storage using AWS credentials.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>options</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Additional options for the database connection, by default "".</dd>
+<dt><strong><code>db_location</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The location of the database. Use ':memory:' for in-memory database,
+by default ":memory:".</dd>
+<dt><strong><code>s3_storage_used</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Indicates whether S3 storage is used, by default True.</dd>
+<dt><strong><code>aws_profile</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The AWS profile name to be used if S3 storage is integrated,
+by default "codenym".</dd>
+</dl>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>options</code></strong> :&ensp;<code>str</code></dt>
+<dd>Options for the database connection.</dd>
+<dt><strong><code>db_location</code></strong> :&ensp;<code>str</code></dt>
+<dd>The location of the DuckDB database.</dd>
+<dt><strong><code>s3_storage_used</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Flag to determine the usage of S3 storage.</dd>
+<dt><strong><code>aws_profile</code></strong> :&ensp;<code>str</code></dt>
+<dd>The AWS profile name for accessing S3 storage.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class DuckDB:
+    &#34;&#34;&#34;A class for managing connections and queries to a DuckDB database.
+
+    This class provides an interface for connecting to a DuckDB database,
+    executing queries, and managing the database connection. It supports
+    integration with S3 storage using AWS credentials.
+
+    Parameters
+    ----------
+    options : str, optional
+        Additional options for the database connection, by default &#34;&#34;.
+    db_location : str, optional
+        The location of the database. Use &#39;:memory:&#39; for in-memory database,
+        by default &#34;:memory:&#34;.
+    s3_storage_used : bool, optional
+        Indicates whether S3 storage is used, by default True.
+    aws_profile : str, optional
+        The AWS profile name to be used if S3 storage is integrated,
+        by default &#34;codenym&#34;.
+
+    Attributes
+    ----------
+    options : str
+        Options for the database connection.
+    db_location : str
+        The location of the DuckDB database.
+    s3_storage_used : bool
+        Flag to determine the usage of S3 storage.
+    aws_profile : str
+        The AWS profile name for accessing S3 storage.
+
+    &#34;&#34;&#34;
+
     def __init__(
         self,
         options=&#34;&#34;,
@@ -242,15 +408,58 @@ class DuckDB:
         self.aws_profile = aws_profile
 
     def connect(self):
-        db = connect(self.db_location)
+        &#34;&#34;&#34;
+        Establishes a connection to the DuckDB database.
+
+        This method sets up the database connection based on the initialized
+        parameters. If S3 storage is used, it installs and loads necessary
+        extensions and sets the AWS credentials.
+
+        Notes
+        -----
+        -  It is recommended to use the context manager instead for most uses.
+
+        Returns
+        -------
+        connection
+            The connection object to the DuckDB database.
+
+        Examples
+        --------
+        &gt;&gt;&gt; duckdb_instance = DuckDB()
+        &gt;&gt;&gt; connection = duckdb_instance.connect()
+        &#34;&#34;&#34;
+        connection = connect(self.db_location)
         if self.s3_storage_used:
-            db.query(&#34;install httpfs; load httpfs;&#34;)
-            db.query(&#34;install aws; load aws;&#34;)
-            db.query(f&#34;CALL load_aws_credentials(&#39;{self.aws_profile}&#39;);&#34;)
-        db.query(self.options)
-        return db
+            connection.query(&#34;install httpfs; load httpfs;&#34;)
+            connection.query(&#34;install aws; load aws;&#34;)
+            connection.query(f&#34;CALL load_aws_credentials(&#39;{self.aws_profile}&#39;);&#34;)
+        connection.query(self.options)
+        return connection
 
     def query(self, select_statement: SQL):
+        &#34;&#34;&#34;Executes a SQL query on the DuckDB database.
+
+        This method connects to the database, registers dataframes from the
+        provided SQL statement, and then executes the query.
+
+        Parameters
+        ----------
+        select_statement : SQL
+            An SQL object representing the SQL query to be executed.
+
+        Returns
+        -------
+        DataFrame or None
+            A pandas DataFrame containing the result of the query, or None
+            if there is no result.
+
+        Examples
+        --------
+        &gt;&gt;&gt; duckdb_instance = DuckDB()
+        &gt;&gt;&gt; df = pd.DataFrame(...)
+        &gt;&gt;&gt; result = duckdb_instance.query(SQL(&#34;SELECT $value FROM $df&#34;,value=123,df=df))
+        &#34;&#34;&#34;
         db = self.connect()
         dataframes = select_statement.collect_dataframes()
         for key, value in dataframes.items():
@@ -262,12 +471,44 @@ class DuckDB:
         return result.df()
 
     def __enter__(self):
-        self.__connection = self.connect()
-        return self.__connection
+        &#34;&#34;&#34;Connects to the DuckDB database.
+
+        The `with` statement will bind a duckdb connect return to
+        the target specified in the as clause of the statement.
+
+        Returns
+        -------
+        connection
+            The connection object to the DuckDB database.
+
+        Examples
+        --------
+        &gt;&gt;&gt; with DuckDB() as connection:
+        ...     # db is a connected database instance
+        ...     result = connection.query(&#34;SELECT COUNT(*) FROM my_table;&#34;)
+        &#34;&#34;&#34;
+        self.connection = self.connect()
+        return self.connection
 
     def __exit__(self, exc_type, exc_value, exc_tb):
-        self.__connection.close()
-        self.__connection = None</code></pre>
+        &#34;&#34;&#34;Exit the runtime context and close the database connection.
+
+        Parameters
+        ----------
+        exc_type : Exception or None
+            The type of the exception that caused the context to be exited.
+        exc_value : Exception or None
+            The exception that caused the context to be exited.
+        exc_tb : Traceback or Non e
+            A traceback object.
+
+        Examples
+        --------
+        &gt;&gt;&gt; with DuckDB() as connection:
+        ...     # Operations with db
+        ... # Automatic closure of db connection occurs here
+        &#34;&#34;&#34;
+        self.connection.close()</code></pre>
 </details>
 <h3>Methods</h3>
 <dl>
@@ -275,31 +516,108 @@ class DuckDB:
 <span>def <span class="ident">connect</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Establishes a connection to the DuckDB database.</p>
+<p>This method sets up the database connection based on the initialized
+parameters. If S3 storage is used, it installs and loads necessary
+extensions and sets the AWS credentials.</p>
+<h2 id="notes">Notes</h2>
+<ul>
+<li>It is recommended to use the context manager instead for most uses.</li>
+</ul>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>connection</code></dt>
+<dd>The connection object to the DuckDB database.</dd>
+</dl>
+<h2 id="examples">Examples</h2>
+<pre><code class="language-python-repl">&gt;&gt;&gt; duckdb_instance = DuckDB()
+&gt;&gt;&gt; connection = duckdb_instance.connect()
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def connect(self):
-    db = connect(self.db_location)
+    &#34;&#34;&#34;
+    Establishes a connection to the DuckDB database.
+
+    This method sets up the database connection based on the initialized
+    parameters. If S3 storage is used, it installs and loads necessary
+    extensions and sets the AWS credentials.
+
+    Notes
+    -----
+    -  It is recommended to use the context manager instead for most uses.
+
+    Returns
+    -------
+    connection
+        The connection object to the DuckDB database.
+
+    Examples
+    --------
+    &gt;&gt;&gt; duckdb_instance = DuckDB()
+    &gt;&gt;&gt; connection = duckdb_instance.connect()
+    &#34;&#34;&#34;
+    connection = connect(self.db_location)
     if self.s3_storage_used:
-        db.query(&#34;install httpfs; load httpfs;&#34;)
-        db.query(&#34;install aws; load aws;&#34;)
-        db.query(f&#34;CALL load_aws_credentials(&#39;{self.aws_profile}&#39;);&#34;)
-    db.query(self.options)
-    return db</code></pre>
+        connection.query(&#34;install httpfs; load httpfs;&#34;)
+        connection.query(&#34;install aws; load aws;&#34;)
+        connection.query(f&#34;CALL load_aws_credentials(&#39;{self.aws_profile}&#39;);&#34;)
+    connection.query(self.options)
+    return connection</code></pre>
 </details>
 </dd>
 <dt id="ezduckdb.core.DuckDB.query"><code class="name flex">
 <span>def <span class="ident">query</span></span>(<span>self, select_statement: <a title="ezduckdb.core.SQL" href="#ezduckdb.core.SQL">SQL</a>)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Executes a SQL query on the DuckDB database.</p>
+<p>This method connects to the database, registers dataframes from the
+provided SQL statement, and then executes the query.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>select_statement</code></strong> :&ensp;<code><a title="ezduckdb.core.SQL" href="#ezduckdb.core.SQL">SQL</a></code></dt>
+<dd>An SQL object representing the SQL query to be executed.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>DataFrame</code> or <code>None</code></dt>
+<dd>A pandas DataFrame containing the result of the query, or None
+if there is no result.</dd>
+</dl>
+<h2 id="examples">Examples</h2>
+<pre><code class="language-python-repl">&gt;&gt;&gt; duckdb_instance = DuckDB()
+&gt;&gt;&gt; df = pd.DataFrame(...)
+&gt;&gt;&gt; result = duckdb_instance.query(SQL(&quot;SELECT $value FROM $df&quot;,value=123,df=df))
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def query(self, select_statement: SQL):
+    &#34;&#34;&#34;Executes a SQL query on the DuckDB database.
+
+    This method connects to the database, registers dataframes from the
+    provided SQL statement, and then executes the query.
+
+    Parameters
+    ----------
+    select_statement : SQL
+        An SQL object representing the SQL query to be executed.
+
+    Returns
+    -------
+    DataFrame or None
+        A pandas DataFrame containing the result of the query, or None
+        if there is no result.
+
+    Examples
+    --------
+    &gt;&gt;&gt; duckdb_instance = DuckDB()
+    &gt;&gt;&gt; df = pd.DataFrame(...)
+    &gt;&gt;&gt; result = duckdb_instance.query(SQL(&#34;SELECT $value FROM $df&#34;,value=123,df=df))
+    &#34;&#34;&#34;
     db = self.connect()
     dataframes = select_statement.collect_dataframes()
     for key, value in dataframes.items():
