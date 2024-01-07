@@ -3,7 +3,7 @@ import pandas as pd
 from sqlescapy import sqlescape
 from string import Template
 from typing import Mapping
-from datanym import S3AwarePath
+from .paths import S3AwarePath
 
 
 class SQL:

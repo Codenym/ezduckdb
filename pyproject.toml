@@ -10,7 +10,7 @@ dev = [
 
 [project]
 name = "ezduckdb"
-version = "0.0.2"
+version = "0.0.4"
 authors = [
   { name="isaac flath", email="isaac.flath@gmail.com" },
 ]
