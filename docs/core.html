@@ -26,7 +26,9 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from duckdb import connect
+<pre><code class="python">import os
+
+from duckdb import connect
 import pandas as pd
 from sqlescapy import sqlescape
 from string import Template
@@ -181,11 +183,14 @@ class DuckDB:
     db_location : str, optional
         The location of the database. Use &#39;:memory:&#39; for in-memory database,
         by default &#34;:memory:&#34;.
-    s3_storage_used : bool, optional
-        Indicates whether S3 storage is used, by default True.
+    aws_profile: str, optional
+        Indicates the profile to use for aws authentication.
     aws_profile : str, optional
-        The AWS profile name to be used if S3 storage is integrated,
-        by default &#34;codenym&#34;.
+        The AWS profile name to be used for aws authentication.
+
+    Notes
+    ----------
+    - Pick aws_profile or aws_env_vars. Not both.
 
     Attributes
     ----------
@@ -201,16 +206,17 @@ class DuckDB:
     &#34;&#34;&#34;
 
     def __init__(
-        self,
-        options=&#34;&#34;,
-        db_location=&#34;:memory:&#34;,
-        s3_storage_used=True,
-        aws_profile=&#34;codenym&#34;,
+        self, options=&#34;&#34;, db_location=&#34;:memory:&#34;, aws_profile=None, aws_env_vars=False
     ):
         self.options = options
         self.db_location = db_location
-        self.s3_storage_used = s3_storage_used
         self.aws_profile = aws_profile
+        self.aws_env_vars = aws_env_vars
+
+        if aws_profile and aws_env_vars:
+            raise ValueError(
+                &#34;Cannot specify both aws_profile and aws_env_vars. Pick one.&#34;
+            )
 
     def connect(self):
         &#34;&#34;&#34;
@@ -222,7 +228,7 @@ class DuckDB:
 
         Notes
         -----
-        -  It is recommended to use the context manager instead for most uses.
+        -  It is recommended to use the context manager or query method instead for most uses.
 
         Returns
         -------
@@ -235,10 +241,13 @@ class DuckDB:
         &gt;&gt;&gt; connection = duckdb_instance.connect()
         &#34;&#34;&#34;
         connection = connect(self.db_location)
-        if self.s3_storage_used:
+        if self.aws_profile or self.aws_env_vars:
             connection.query(&#34;install httpfs; load httpfs;&#34;)
             connection.query(&#34;install aws; load aws;&#34;)
-            connection.query(f&#34;CALL load_aws_credentials(&#39;{self.aws_profile}&#39;);&#34;)
+            if self.aws_env_vars:
+                connection.query(&#34;CALL load_aws_credentials();&#34;)
+            else:
+                connection.query(f&#34;CALL load_aws_credentials(&#39;{self.aws_profile}&#39;);&#34;)
         connection.query(self.options)
         return connection
 
@@ -327,7 +336,7 @@ class DuckDB:
 <dl>
 <dt id="ezduckdb.core.DuckDB"><code class="flex name class">
 <span>class <span class="ident">DuckDB</span></span>
-<span>(</span><span>options='', db_location=':memory:', s3_storage_used=True, aws_profile='codenym')</span>
+<span>(</span><span>options='', db_location=':memory:', aws_profile=None, aws_env_vars=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>A class for managing connections and queries to a DuckDB database.</p>
@@ -341,12 +350,15 @@ integration with S3 storage using AWS credentials.</p>
 <dt><strong><code>db_location</code></strong> :&ensp;<code>str</code>, optional</dt>
 <dd>The location of the database. Use ':memory:' for in-memory database,
 by default ":memory:".</dd>
-<dt><strong><code>s3_storage_used</code></strong> :&ensp;<code>bool</code>, optional</dt>
-<dd>Indicates whether S3 storage is used, by default True.</dd>
 <dt><strong><code>aws_profile</code></strong> :&ensp;<code>str</code>, optional</dt>
-<dd>The AWS profile name to be used if S3 storage is integrated,
-by default "codenym".</dd>
+<dd>Indicates the profile to use for aws authentication.</dd>
+<dt><strong><code>aws_profile</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The AWS profile name to be used for aws authentication.</dd>
 </dl>
+<h2 id="notes">Notes</h2>
+<ul>
+<li>Pick aws_profile or aws_env_vars. Not both.</li>
+</ul>
 <h2 id="attributes">Attributes</h2>
 <dl>
 <dt><strong><code>options</code></strong> :&ensp;<code>str</code></dt>
@@ -376,11 +388,14 @@ by default "codenym".</dd>
     db_location : str, optional
         The location of the database. Use &#39;:memory:&#39; for in-memory database,
         by default &#34;:memory:&#34;.
-    s3_storage_used : bool, optional
-        Indicates whether S3 storage is used, by default True.
+    aws_profile: str, optional
+        Indicates the profile to use for aws authentication.
     aws_profile : str, optional
-        The AWS profile name to be used if S3 storage is integrated,
-        by default &#34;codenym&#34;.
+        The AWS profile name to be used for aws authentication.
+
+    Notes
+    ----------
+    - Pick aws_profile or aws_env_vars. Not both.
 
     Attributes
     ----------
@@ -396,16 +411,17 @@ by default "codenym".</dd>
     &#34;&#34;&#34;
 
     def __init__(
-        self,
-        options=&#34;&#34;,
-        db_location=&#34;:memory:&#34;,
-        s3_storage_used=True,
-        aws_profile=&#34;codenym&#34;,
+        self, options=&#34;&#34;, db_location=&#34;:memory:&#34;, aws_profile=None, aws_env_vars=False
     ):
         self.options = options
         self.db_location = db_location
-        self.s3_storage_used = s3_storage_used
         self.aws_profile = aws_profile
+        self.aws_env_vars = aws_env_vars
+
+        if aws_profile and aws_env_vars:
+            raise ValueError(
+                &#34;Cannot specify both aws_profile and aws_env_vars. Pick one.&#34;
+            )
 
     def connect(self):
         &#34;&#34;&#34;
@@ -417,7 +433,7 @@ by default "codenym".</dd>
 
         Notes
         -----
-        -  It is recommended to use the context manager instead for most uses.
+        -  It is recommended to use the context manager or query method instead for most uses.
 
         Returns
         -------
@@ -430,10 +446,13 @@ by default "codenym".</dd>
         &gt;&gt;&gt; connection = duckdb_instance.connect()
         &#34;&#34;&#34;
         connection = connect(self.db_location)
-        if self.s3_storage_used:
+        if self.aws_profile or self.aws_env_vars:
             connection.query(&#34;install httpfs; load httpfs;&#34;)
             connection.query(&#34;install aws; load aws;&#34;)
-            connection.query(f&#34;CALL load_aws_credentials(&#39;{self.aws_profile}&#39;);&#34;)
+            if self.aws_env_vars:
+                connection.query(&#34;CALL load_aws_credentials();&#34;)
+            else:
+                connection.query(f&#34;CALL load_aws_credentials(&#39;{self.aws_profile}&#39;);&#34;)
         connection.query(self.options)
         return connection
 
@@ -522,7 +541,7 @@ parameters. If S3 storage is used, it installs and loads necessary
 extensions and sets the AWS credentials.</p>
 <h2 id="notes">Notes</h2>
 <ul>
-<li>It is recommended to use the context manager instead for most uses.</li>
+<li>It is recommended to use the context manager or query method instead for most uses.</li>
 </ul>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -547,7 +566,7 @@ extensions and sets the AWS credentials.</p>
 
     Notes
     -----
-    -  It is recommended to use the context manager instead for most uses.
+    -  It is recommended to use the context manager or query method instead for most uses.
 
     Returns
     -------
@@ -560,10 +579,13 @@ extensions and sets the AWS credentials.</p>
     &gt;&gt;&gt; connection = duckdb_instance.connect()
     &#34;&#34;&#34;
     connection = connect(self.db_location)
-    if self.s3_storage_used:
+    if self.aws_profile or self.aws_env_vars:
         connection.query(&#34;install httpfs; load httpfs;&#34;)
         connection.query(&#34;install aws; load aws;&#34;)
-        connection.query(f&#34;CALL load_aws_credentials(&#39;{self.aws_profile}&#39;);&#34;)
+        if self.aws_env_vars:
+            connection.query(&#34;CALL load_aws_credentials();&#34;)
+        else:
+            connection.query(f&#34;CALL load_aws_credentials(&#39;{self.aws_profile}&#39;);&#34;)
     connection.query(self.options)
     return connection</code></pre>
 </details>

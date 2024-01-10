@@ -34,22 +34,22 @@ class TestSQL:
 
 class TestDuckDB:
     def test_query(self):
-        db = DuckDB(s3_storage_used=False)
+        db = DuckDB()
         assert db.query(SQL("select 1")).values == pd.DataFrame([(1,)]).values
 
     def test_context_manager(self):
-        with DuckDB(s3_storage_used=False) as conn:
+        with DuckDB() as conn:
             assert conn.query("select 1").df().values == pd.DataFrame([(1,)]).values
 
     def test_df_bindings(self):
         df = pd.DataFrame({"id": [1, 2, 3]})
-        db = DuckDB(s3_storage_used=False)
+        db = DuckDB()
         act = db.query(SQL("SELECT * FROM $table", table=df)).values
         exp = pd.DataFrame([(1,), (2,), (3,)]).values
         assert (act == exp).all()
 
     def test_sql_bindings(self):
-        db = DuckDB(s3_storage_used=False)
+        db = DuckDB()
         act = db.query(
             SQL("SELECT * FROM $table", table=SQL("SELECT $val", val=1))
         ).values
@@ -60,7 +60,7 @@ class TestDuckDB:
         s3_path = (
             "s3://codenym-automated-testing/ezduckdb/parquet/schema1_table1.parquet"
         )
-        db = DuckDB(s3_storage_used=True)
+        db = DuckDB(aws_profile="codenym")
         act = db.query(
             SQL("SELECT * FROM read_parquet($s3_path)", s3_path=s3_path)
         ).values

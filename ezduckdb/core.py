@@ -1,3 +1,5 @@
+import os
+
 from duckdb import connect
 import pandas as pd
 from sqlescapy import sqlescape
@@ -153,11 +155,14 @@ class DuckDB:
     db_location : str, optional
         The location of the database. Use ':memory:' for in-memory database,
         by default ":memory:".
-    s3_storage_used : bool, optional
-        Indicates whether S3 storage is used, by default True.
+    aws_profile: str, optional
+        Indicates the profile to use for aws authentication.
     aws_profile : str, optional
-        The AWS profile name to be used if S3 storage is integrated,
-        by default "codenym".
+        The AWS profile name to be used for aws authentication.
+
+    Notes
+    ----------
+    - Pick aws_profile or aws_env_vars. Not both.
 
     Attributes
     ----------
@@ -173,16 +178,17 @@ class DuckDB:
     """
 
     def __init__(
-        self,
-        options="",
-        db_location=":memory:",
-        s3_storage_used=True,
-        aws_profile="codenym",
+        self, options="", db_location=":memory:", aws_profile=None, aws_env_vars=False
     ):
         self.options = options
         self.db_location = db_location
-        self.s3_storage_used = s3_storage_used
         self.aws_profile = aws_profile
+        self.aws_env_vars = aws_env_vars
+
+        if aws_profile and aws_env_vars:
+            raise ValueError(
+                "Cannot specify both aws_profile and aws_env_vars. Pick one."
+            )
 
     def connect(self):
         """
@@ -194,7 +200,7 @@ class DuckDB:
 
         Notes
         -----
-        -  It is recommended to use the context manager instead for most uses.
+        -  It is recommended to use the context manager or query method instead for most uses.
 
         Returns
         -------
@@ -207,10 +213,13 @@ class DuckDB:
         >>> connection = duckdb_instance.connect()
         """
         connection = connect(self.db_location)
-        if self.s3_storage_used:
+        if self.aws_profile or self.aws_env_vars:
             connection.query("install httpfs; load httpfs;")
             connection.query("install aws; load aws;")
-            connection.query(f"CALL load_aws_credentials('{self.aws_profile}');")
+            if self.aws_env_vars:
+                connection.query("CALL load_aws_credentials();")
+            else:
+                connection.query(f"CALL load_aws_credentials('{self.aws_profile}');")
         connection.query(self.options)
         return connection
 
