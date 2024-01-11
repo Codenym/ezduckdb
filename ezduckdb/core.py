@@ -6,6 +6,7 @@ from sqlescapy import sqlescape
 from string import Template
 from typing import Mapping
 from .paths import S3AwarePath
+import logging
 
 
 class SQL:
@@ -62,6 +63,95 @@ class SQL:
             assert binding in sql
         self.sql = sql
         self.bindings = bindings
+
+    @classmethod
+    def from_file(cls, fpath: S3AwarePath, **bindings):
+        """
+        Creates an SQL object from a file, optionally incorporating additional bindings.
+
+        This class method reads an SQL query from a file, allowing for initial bindings to be specified within the file and
+        supplemented by additional bindings passed as keyword arguments. The method supports S3AwarePath as file paths, facilitating
+        seamless integration with local and S3 file systems. It also handles an optional header in the file specifying initial bindings
+        in a Python dictionary format. This enables dynamic construction of SQL objects with pre-defined or externally supplied bindings.
+
+        Parameters
+        ----------
+        fpath : S3AwarePath
+            The file path (supporting S3 paths) from which to read the SQL query.
+        **bindings : dict, optional
+            Additional variable keyword arguments representing bindings for the SQL query. These bindings will override any
+            bindings specified within the file if they share the same keys.
+
+        Returns
+        -------
+        SQL
+            An instance of the SQL class initialized with the query and bindings from the file and additional bindings provided.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the specified file path does not exist.
+        SyntaxError
+            If the initial bindings in the file are not in a valid Python dictionary format.
+
+        Examples
+        --------
+        >>> query = SQL.from_file('path/to/query.sql', id=123)
+        >>> print(query.to_string())
+        The output depends on the contents of 'path/to/query.sql' and the additional binding provided.
+        """
+        with open(fpath, "r") as f:
+            text = f.read()
+
+        if bindings is None and text.startswith("--bindings:"):
+            logging.warning(
+                "No bindings provided though file indicates that some exist.  Bindings from file are:"
+            )
+            logging.warning(text.split("\n")[0])
+        return SQL(text, **bindings)
+
+    def to_file(self, fpath: S3AwarePath, templated=False):
+        """
+        Saves the SQL query to a file, with an option to include bindings as a header.
+
+        This method writes the SQL query, and optionally its bindings, to a specified file. If the 'templated' parameter is set to True,
+        the method saves the sql template with a head containing the bindings. If False, it converts to valid sql and saves the query.
+        The file is saved in a location specified by the S3AwarePath, allowing compatibility with both local and S3 file systems.
+
+        Parameters
+        ----------
+        fpath : S3AwarePath
+            The file path (supporting S3 paths) where the SQL query will be written.
+        templated : bool, optional
+            If True saves the sql query template.  If False sales the sql query with bindings relaced, by default False.
+
+        Examples
+        --------
+        >>> query = SQL("SELECT * FROM data WHERE id = $id", id=123)
+        >>> query.to_file('path/to/output.sql', templated=True)
+        The file 'path/to/output.sql' will contain the query with bindings as a header.
+        ```sql
+        --bindings: {"id":123}
+
+        SELECT * FROM data WHERE id = $id
+        ```
+        >>> query = SQL("SELECT * FROM data WHERE id = $id", id=123)
+        >>> query.to_file('path/to/output.sql', templated=False)
+        The file 'path/to/output.sql' will contain the query with bindings as a header.
+        ```sql
+        SELECT * FROM data WHERE id = 123
+        ```
+
+        """
+        if templated is True:
+            file = """--bindings: {self.bindings}\n\n\n""" + self.sql
+        elif templated is False:
+            file = self.to_string()
+        else:
+            raise ValueError("templated must be a boolean")
+
+        with open(fpath, "w") as f:
+            f.write(file)
 
     def to_string(self) -> str:
         """Converts the SQL query with its bindings into a string format.
