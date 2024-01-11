@@ -34,6 +34,7 @@ from sqlescapy import sqlescape
 from string import Template
 from typing import Mapping
 from .paths import S3AwarePath
+import logging
 
 
 class SQL:
@@ -90,6 +91,95 @@ class SQL:
             assert binding in sql
         self.sql = sql
         self.bindings = bindings
+
+    @classmethod
+    def from_file(cls, fpath: S3AwarePath, **bindings):
+        &#34;&#34;&#34;
+        Creates an SQL object from a file, optionally incorporating additional bindings.
+
+        This class method reads an SQL query from a file, allowing for initial bindings to be specified within the file and
+        supplemented by additional bindings passed as keyword arguments. The method supports S3AwarePath as file paths, facilitating
+        seamless integration with local and S3 file systems. It also handles an optional header in the file specifying initial bindings
+        in a Python dictionary format. This enables dynamic construction of SQL objects with pre-defined or externally supplied bindings.
+
+        Parameters
+        ----------
+        fpath : S3AwarePath
+            The file path (supporting S3 paths) from which to read the SQL query.
+        **bindings : dict, optional
+            Additional variable keyword arguments representing bindings for the SQL query. These bindings will override any
+            bindings specified within the file if they share the same keys.
+
+        Returns
+        -------
+        SQL
+            An instance of the SQL class initialized with the query and bindings from the file and additional bindings provided.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the specified file path does not exist.
+        SyntaxError
+            If the initial bindings in the file are not in a valid Python dictionary format.
+
+        Examples
+        --------
+        &gt;&gt;&gt; query = SQL.from_file(&#39;path/to/query.sql&#39;, id=123)
+        &gt;&gt;&gt; print(query.to_string())
+        The output depends on the contents of &#39;path/to/query.sql&#39; and the additional binding provided.
+        &#34;&#34;&#34;
+        with open(fpath, &#34;r&#34;) as f:
+            text = f.read()
+
+        if bindings is None and text.startswith(&#34;--bindings:&#34;):
+            logging.warning(
+                &#34;No bindings provided though file indicates that some exist.  Bindings from file are:&#34;
+            )
+            logging.warning(text.split(&#34;\n&#34;)[0])
+        return SQL(text, **bindings)
+
+    def to_file(self, fpath: S3AwarePath, templated=False):
+        &#34;&#34;&#34;
+        Saves the SQL query to a file, with an option to include bindings as a header.
+
+        This method writes the SQL query, and optionally its bindings, to a specified file. If the &#39;templated&#39; parameter is set to True,
+        the method saves the sql template with a head containing the bindings. If False, it converts to valid sql and saves the query.
+        The file is saved in a location specified by the S3AwarePath, allowing compatibility with both local and S3 file systems.
+
+        Parameters
+        ----------
+        fpath : S3AwarePath
+            The file path (supporting S3 paths) where the SQL query will be written.
+        templated : bool, optional
+            If True saves the sql query template.  If False sales the sql query with bindings relaced, by default False.
+
+        Examples
+        --------
+        &gt;&gt;&gt; query = SQL(&#34;SELECT * FROM data WHERE id = $id&#34;, id=123)
+        &gt;&gt;&gt; query.to_file(&#39;path/to/output.sql&#39;, templated=True)
+        The file &#39;path/to/output.sql&#39; will contain the query with bindings as a header.
+        ```sql
+        --bindings: {&#34;id&#34;:123}
+
+        SELECT * FROM data WHERE id = $id
+        ```
+        &gt;&gt;&gt; query = SQL(&#34;SELECT * FROM data WHERE id = $id&#34;, id=123)
+        &gt;&gt;&gt; query.to_file(&#39;path/to/output.sql&#39;, templated=False)
+        The file &#39;path/to/output.sql&#39; will contain the query with bindings as a header.
+        ```sql
+        SELECT * FROM data WHERE id = 123
+        ```
+
+        &#34;&#34;&#34;
+        if templated is True:
+            file = &#34;&#34;&#34;--bindings: {self.bindings}\n\n\n&#34;&#34;&#34; + self.sql
+        elif templated is False:
+            file = self.to_string()
+        else:
+            raise ValueError(&#34;templated must be a boolean&#34;)
+
+        with open(fpath, &#34;w&#34;) as f:
+            f.write(file)
 
     def to_string(self) -&gt; str:
         &#34;&#34;&#34;Converts the SQL query with its bindings into a string format.
@@ -758,6 +848,95 @@ For instance, dataframes are represented by a unique identifier, and strings are
         self.sql = sql
         self.bindings = bindings
 
+    @classmethod
+    def from_file(cls, fpath: S3AwarePath, **bindings):
+        &#34;&#34;&#34;
+        Creates an SQL object from a file, optionally incorporating additional bindings.
+
+        This class method reads an SQL query from a file, allowing for initial bindings to be specified within the file and
+        supplemented by additional bindings passed as keyword arguments. The method supports S3AwarePath as file paths, facilitating
+        seamless integration with local and S3 file systems. It also handles an optional header in the file specifying initial bindings
+        in a Python dictionary format. This enables dynamic construction of SQL objects with pre-defined or externally supplied bindings.
+
+        Parameters
+        ----------
+        fpath : S3AwarePath
+            The file path (supporting S3 paths) from which to read the SQL query.
+        **bindings : dict, optional
+            Additional variable keyword arguments representing bindings for the SQL query. These bindings will override any
+            bindings specified within the file if they share the same keys.
+
+        Returns
+        -------
+        SQL
+            An instance of the SQL class initialized with the query and bindings from the file and additional bindings provided.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the specified file path does not exist.
+        SyntaxError
+            If the initial bindings in the file are not in a valid Python dictionary format.
+
+        Examples
+        --------
+        &gt;&gt;&gt; query = SQL.from_file(&#39;path/to/query.sql&#39;, id=123)
+        &gt;&gt;&gt; print(query.to_string())
+        The output depends on the contents of &#39;path/to/query.sql&#39; and the additional binding provided.
+        &#34;&#34;&#34;
+        with open(fpath, &#34;r&#34;) as f:
+            text = f.read()
+
+        if bindings is None and text.startswith(&#34;--bindings:&#34;):
+            logging.warning(
+                &#34;No bindings provided though file indicates that some exist.  Bindings from file are:&#34;
+            )
+            logging.warning(text.split(&#34;\n&#34;)[0])
+        return SQL(text, **bindings)
+
+    def to_file(self, fpath: S3AwarePath, templated=False):
+        &#34;&#34;&#34;
+        Saves the SQL query to a file, with an option to include bindings as a header.
+
+        This method writes the SQL query, and optionally its bindings, to a specified file. If the &#39;templated&#39; parameter is set to True,
+        the method saves the sql template with a head containing the bindings. If False, it converts to valid sql and saves the query.
+        The file is saved in a location specified by the S3AwarePath, allowing compatibility with both local and S3 file systems.
+
+        Parameters
+        ----------
+        fpath : S3AwarePath
+            The file path (supporting S3 paths) where the SQL query will be written.
+        templated : bool, optional
+            If True saves the sql query template.  If False sales the sql query with bindings relaced, by default False.
+
+        Examples
+        --------
+        &gt;&gt;&gt; query = SQL(&#34;SELECT * FROM data WHERE id = $id&#34;, id=123)
+        &gt;&gt;&gt; query.to_file(&#39;path/to/output.sql&#39;, templated=True)
+        The file &#39;path/to/output.sql&#39; will contain the query with bindings as a header.
+        ```sql
+        --bindings: {&#34;id&#34;:123}
+
+        SELECT * FROM data WHERE id = $id
+        ```
+        &gt;&gt;&gt; query = SQL(&#34;SELECT * FROM data WHERE id = $id&#34;, id=123)
+        &gt;&gt;&gt; query.to_file(&#39;path/to/output.sql&#39;, templated=False)
+        The file &#39;path/to/output.sql&#39; will contain the query with bindings as a header.
+        ```sql
+        SELECT * FROM data WHERE id = 123
+        ```
+
+        &#34;&#34;&#34;
+        if templated is True:
+            file = &#34;&#34;&#34;--bindings: {self.bindings}\n\n\n&#34;&#34;&#34; + self.sql
+        elif templated is False:
+            file = self.to_string()
+        else:
+            raise ValueError(&#34;templated must be a boolean&#34;)
+
+        with open(fpath, &#34;w&#34;) as f:
+            f.write(file)
+
     def to_string(self) -&gt; str:
         &#34;&#34;&#34;Converts the SQL query with its bindings into a string format.
 
@@ -835,6 +1014,94 @@ For instance, dataframes are represented by a unique identifier, and strings are
                 dataframes.update(value.collect_dataframes())
         return dataframes</code></pre>
 </details>
+<h3>Static methods</h3>
+<dl>
+<dt id="ezduckdb.core.SQL.from_file"><code class="name flex">
+<span>def <span class="ident">from_file</span></span>(<span>fpath: <a title="ezduckdb.paths.S3AwarePath" href="paths.html#ezduckdb.paths.S3AwarePath">S3AwarePath</a>, **bindings)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates an SQL object from a file, optionally incorporating additional bindings.</p>
+<p>This class method reads an SQL query from a file, allowing for initial bindings to be specified within the file and
+supplemented by additional bindings passed as keyword arguments. The method supports S3AwarePath as file paths, facilitating
+seamless integration with local and S3 file systems. It also handles an optional header in the file specifying initial bindings
+in a Python dictionary format. This enables dynamic construction of SQL objects with pre-defined or externally supplied bindings.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>fpath</code></strong> :&ensp;<code>S3AwarePath</code></dt>
+<dd>The file path (supporting S3 paths) from which to read the SQL query.</dd>
+<dt><strong><code>**bindings</code></strong> :&ensp;<code>dict</code>, optional</dt>
+<dd>Additional variable keyword arguments representing bindings for the SQL query. These bindings will override any
+bindings specified within the file if they share the same keys.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="ezduckdb.core.SQL" href="#ezduckdb.core.SQL">SQL</a></code></dt>
+<dd>An instance of the SQL class initialized with the query and bindings from the file and additional bindings provided.</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>FileNotFoundError</code></dt>
+<dd>If the specified file path does not exist.</dd>
+<dt><code>SyntaxError</code></dt>
+<dd>If the initial bindings in the file are not in a valid Python dictionary format.</dd>
+</dl>
+<h2 id="examples">Examples</h2>
+<pre><code class="language-python-repl">&gt;&gt;&gt; query = SQL.from_file('path/to/query.sql', id=123)
+&gt;&gt;&gt; print(query.to_string())
+The output depends on the contents of 'path/to/query.sql' and the additional binding provided.
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def from_file(cls, fpath: S3AwarePath, **bindings):
+    &#34;&#34;&#34;
+    Creates an SQL object from a file, optionally incorporating additional bindings.
+
+    This class method reads an SQL query from a file, allowing for initial bindings to be specified within the file and
+    supplemented by additional bindings passed as keyword arguments. The method supports S3AwarePath as file paths, facilitating
+    seamless integration with local and S3 file systems. It also handles an optional header in the file specifying initial bindings
+    in a Python dictionary format. This enables dynamic construction of SQL objects with pre-defined or externally supplied bindings.
+
+    Parameters
+    ----------
+    fpath : S3AwarePath
+        The file path (supporting S3 paths) from which to read the SQL query.
+    **bindings : dict, optional
+        Additional variable keyword arguments representing bindings for the SQL query. These bindings will override any
+        bindings specified within the file if they share the same keys.
+
+    Returns
+    -------
+    SQL
+        An instance of the SQL class initialized with the query and bindings from the file and additional bindings provided.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified file path does not exist.
+    SyntaxError
+        If the initial bindings in the file are not in a valid Python dictionary format.
+
+    Examples
+    --------
+    &gt;&gt;&gt; query = SQL.from_file(&#39;path/to/query.sql&#39;, id=123)
+    &gt;&gt;&gt; print(query.to_string())
+    The output depends on the contents of &#39;path/to/query.sql&#39; and the additional binding provided.
+    &#34;&#34;&#34;
+    with open(fpath, &#34;r&#34;) as f:
+        text = f.read()
+
+    if bindings is None and text.startswith(&#34;--bindings:&#34;):
+        logging.warning(
+            &#34;No bindings provided though file indicates that some exist.  Bindings from file are:&#34;
+        )
+        logging.warning(text.split(&#34;\n&#34;)[0])
+    return SQL(text, **bindings)</code></pre>
+</details>
+</dd>
+</dl>
 <h3>Methods</h3>
 <dl>
 <dt id="ezduckdb.core.SQL.collect_dataframes"><code class="name flex">
@@ -895,6 +1162,91 @@ df_&lt;unique_id_of_df2&gt;: &lt;class 'pandas.core.frame.DataFrame'&gt;
         elif isinstance(value, SQL):
             dataframes.update(value.collect_dataframes())
     return dataframes</code></pre>
+</details>
+</dd>
+<dt id="ezduckdb.core.SQL.to_file"><code class="name flex">
+<span>def <span class="ident">to_file</span></span>(<span>self, fpath: <a title="ezduckdb.paths.S3AwarePath" href="paths.html#ezduckdb.paths.S3AwarePath">S3AwarePath</a>, templated=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Saves the SQL query to a file, with an option to include bindings as a header.</p>
+<p>This method writes the SQL query, and optionally its bindings, to a specified file. If the 'templated' parameter is set to True,
+the method saves the sql template with a head containing the bindings. If False, it converts to valid sql and saves the query.
+The file is saved in a location specified by the S3AwarePath, allowing compatibility with both local and S3 file systems.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>fpath</code></strong> :&ensp;<code>S3AwarePath</code></dt>
+<dd>The file path (supporting S3 paths) where the SQL query will be written.</dd>
+<dt><strong><code>templated</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>If True saves the sql query template.
+If False sales the sql query with bindings relaced, by default False.</dd>
+</dl>
+<h2 id="examples">Examples</h2>
+<pre><code class="language-python-repl">&gt;&gt;&gt; query = SQL(&quot;SELECT * FROM data WHERE id = $id&quot;, id=123)
+&gt;&gt;&gt; query.to_file('path/to/output.sql', templated=True)
+The file 'path/to/output.sql' will contain the query with bindings as a header.
+```sql
+--bindings: {&quot;id&quot;:123}
+
+SELECT * FROM data WHERE id = $id
+</code></pre>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>query = SQL("SELECT * FROM data WHERE id = $id", id=123)
+query.to_file('path/to/output.sql', templated=False)
+The file 'path/to/output.sql' will contain the query with bindings as a header.</p>
+</blockquote>
+</blockquote>
+</blockquote>
+<pre><code class="language-sql">SELECT * FROM data WHERE id = 123
+</code></pre>
+<p>```</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def to_file(self, fpath: S3AwarePath, templated=False):
+    &#34;&#34;&#34;
+    Saves the SQL query to a file, with an option to include bindings as a header.
+
+    This method writes the SQL query, and optionally its bindings, to a specified file. If the &#39;templated&#39; parameter is set to True,
+    the method saves the sql template with a head containing the bindings. If False, it converts to valid sql and saves the query.
+    The file is saved in a location specified by the S3AwarePath, allowing compatibility with both local and S3 file systems.
+
+    Parameters
+    ----------
+    fpath : S3AwarePath
+        The file path (supporting S3 paths) where the SQL query will be written.
+    templated : bool, optional
+        If True saves the sql query template.  If False sales the sql query with bindings relaced, by default False.
+
+    Examples
+    --------
+    &gt;&gt;&gt; query = SQL(&#34;SELECT * FROM data WHERE id = $id&#34;, id=123)
+    &gt;&gt;&gt; query.to_file(&#39;path/to/output.sql&#39;, templated=True)
+    The file &#39;path/to/output.sql&#39; will contain the query with bindings as a header.
+    ```sql
+    --bindings: {&#34;id&#34;:123}
+
+    SELECT * FROM data WHERE id = $id
+    ```
+    &gt;&gt;&gt; query = SQL(&#34;SELECT * FROM data WHERE id = $id&#34;, id=123)
+    &gt;&gt;&gt; query.to_file(&#39;path/to/output.sql&#39;, templated=False)
+    The file &#39;path/to/output.sql&#39; will contain the query with bindings as a header.
+    ```sql
+    SELECT * FROM data WHERE id = 123
+    ```
+
+    &#34;&#34;&#34;
+    if templated is True:
+        file = &#34;&#34;&#34;--bindings: {self.bindings}\n\n\n&#34;&#34;&#34; + self.sql
+    elif templated is False:
+        file = self.to_string()
+    else:
+        raise ValueError(&#34;templated must be a boolean&#34;)
+
+    with open(fpath, &#34;w&#34;) as f:
+        f.write(file)</code></pre>
 </details>
 </dd>
 <dt id="ezduckdb.core.SQL.to_string"><code class="name flex">
@@ -1005,6 +1357,8 @@ Unsupported types raise a ValueError.</p>
 <h4><code><a title="ezduckdb.core.SQL" href="#ezduckdb.core.SQL">SQL</a></code></h4>
 <ul class="">
 <li><code><a title="ezduckdb.core.SQL.collect_dataframes" href="#ezduckdb.core.SQL.collect_dataframes">collect_dataframes</a></code></li>
+<li><code><a title="ezduckdb.core.SQL.from_file" href="#ezduckdb.core.SQL.from_file">from_file</a></code></li>
+<li><code><a title="ezduckdb.core.SQL.to_file" href="#ezduckdb.core.SQL.to_file">to_file</a></code></li>
 <li><code><a title="ezduckdb.core.SQL.to_string" href="#ezduckdb.core.SQL.to_string">to_string</a></code></li>
 </ul>
 </li>
