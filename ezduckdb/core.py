@@ -59,8 +59,9 @@ class SQL:
     """
 
     def __init__(self, sql, **bindings):
-        for binding in bindings:
-            assert binding in sql
+        extra_bindings = [binding for binding in bindings if binding not in sql]
+        if len(extra_bindings) > 0:
+                raise Exception(f"Extra Bindings: {extra_bindings}"
         self.sql = sql
         self.bindings = bindings
 
