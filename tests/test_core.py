@@ -11,7 +11,7 @@ class TestSQL:
         assert inp.to_string() == "SELECT * FROM 'foo' WHERE id = 1"
 
     def test_nonexistant_bindings(self):
-        with raises(AssertionError) as _:
+        with raises(Exception) as _:
             SQL("SELECT * FROM table", id=1)
 
     def test_df_bindings(self):

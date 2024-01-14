@@ -61,7 +61,7 @@ class SQL:
     def __init__(self, sql, **bindings):
         extra_bindings = [binding for binding in bindings if binding not in sql]
         if len(extra_bindings) > 0:
-                raise Exception(f"Extra Bindings: {extra_bindings}"
+                raise Exception(f"Extra Bindings: {extra_bindings}")
         self.sql = sql
         self.bindings = bindings
 
@@ -269,12 +269,13 @@ class DuckDB:
     """
 
     def __init__(
-        self, options="", db_location=":memory:", aws_profile=None, aws_env_vars=False
+        self, options="", db_location=":memory:", aws_profile=None, aws_env_vars=False, spatial=False
     ):
         self.options = options
         self.db_location = db_location
         self.aws_profile = aws_profile
         self.aws_env_vars = aws_env_vars
+        self.spatial = spatial
 
         if aws_profile and aws_env_vars:
             raise ValueError(
@@ -311,6 +312,8 @@ class DuckDB:
                 connection.query("CALL load_aws_credentials();")
             else:
                 connection.query(f"CALL load_aws_credentials('{self.aws_profile}');")
+        if self.spatial:
+            connection.query("install spatial; load spatial;")
         connection.query(self.options)
         return connection
 
