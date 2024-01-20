@@ -269,7 +269,12 @@ class DuckDB:
     """
 
     def __init__(
-            self, options="", db_location=":memory:", aws_profile=None, aws_env_vars=False, spatial=False
+        self,
+        options="",
+        db_location=":memory:",
+        aws_profile=None,
+        aws_env_vars=False,
+        spatial=False,
     ):
         self.options = options
         self.db_location = db_location
