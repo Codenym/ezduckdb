@@ -61,7 +61,7 @@ class SQL:
     def __init__(self, sql, **bindings):
         extra_bindings = [binding for binding in bindings if binding not in sql]
         if len(extra_bindings) > 0:
-                raise Exception(f"Extra Bindings: {extra_bindings}")
+            raise Exception(f"Extra Bindings: {extra_bindings}")
         self.sql = sql
         self.bindings = bindings
 
@@ -269,7 +269,7 @@ class DuckDB:
     """
 
     def __init__(
-        self, options="", db_location=":memory:", aws_profile=None, aws_env_vars=False, spatial=False
+            self, options="", db_location=":memory:", aws_profile=None, aws_env_vars=False, spatial=False
     ):
         self.options = options
         self.db_location = db_location
