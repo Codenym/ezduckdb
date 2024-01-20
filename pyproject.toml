@@ -8,7 +8,6 @@ dev = [
     "pdoc3",
     "twine",
     "pre-commit",
-    "black",
 ]
 
 [project]
