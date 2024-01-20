@@ -1,5 +1,3 @@
-import os
-
 from duckdb import connect
 import pandas as pd
 from sqlescapy import sqlescape
