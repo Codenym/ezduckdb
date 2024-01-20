@@ -165,7 +165,7 @@ class SQL:
         Returns
         -------
         str
-            The formatted SQL query string with all bindings appropriately replaced.
+            The formatted SQL query string with all bindings appropriately replaced
 
         Raises
         ------

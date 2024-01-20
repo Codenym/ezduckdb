@@ -5,7 +5,9 @@ build-backend = "setuptools.build_meta"
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "pdoc3",
     "twine",
+    "pre-commit",
 ]
 
 [project]
