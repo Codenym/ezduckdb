@@ -122,7 +122,7 @@ class SQL:
         fpath : S3AwarePath
             The file path (supporting S3 paths) where the SQL query will be written.
         templated : bool, optional
-            If True saves the sql query template.  If False sales the sql query with bindings relaced, by default False.
+            If True saves the sql query template.  If False sales the sql query with bindings replaced, by default False.
 
         Examples
         --------
@@ -142,12 +142,11 @@ class SQL:
         ```
 
         """
-        if templated is True:
+        assert isinstance(templated, bool)
+        if templated:
             file = """--bindings: {self.bindings}\n\n\n""" + self.sql
-        elif templated is False:
-            file = self.to_string()
         else:
-            raise ValueError("templated must be a boolean")
+            file = self.to_string()
 
         with open(fpath, "w") as f:
             f.write(file)
